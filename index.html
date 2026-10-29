@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Bulk Subscription CSV Generator</title>
+<link rel="icon" type="image/png" href="icon.png" />
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #22c55e;
+    --accent-hover: #16a34a;
+    --danger: #f87171;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 32px 16px;
+  }
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 22px;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .title-icon {
+    width: 28px;
+    height: 28px;
+  }
+  p.subtitle {
+    color: var(--muted);
+    margin-top: 0;
+    margin-bottom: 24px;
+    font-size: 14px;
+  }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+  .tab {
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    padding: 10px 16px;
+    margin: 0 0 -1px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .tab:hover {
+    background: transparent;
+    color: var(--text);
+  }
+  .tab.active {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 220px;
+    background: #0b1220;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    resize: vertical;
+  }
+  .hint {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+  .row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  .field {
+    flex: 1;
+    min-width: 180px;
+  }
+  input[type="date"], input[type="number"] {
+    width: 100%;
+    background: #0b1220;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+  button {
+    background: var(--accent);
+    color: #06210f;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 16px;
+  }
+  button:hover { background: var(--accent-hover); }
+  button:disabled {
+    background: #475569;
+    color: #94a3b8;
+    cursor: not-allowed;
+  }
+  .filename-preview {
+    margin-top: 12px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    color: var(--accent);
+    word-break: break-all;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+    font-size: 13px;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 6px 8px;
+    text-align: left;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+  }
+  th {
+    background: #0b1220;
+    color: var(--muted);
+    font-family: inherit;
+  }
+  .error {
+    color: var(--danger);
+    font-size: 13px;
+    margin-top: 12px;
+    white-space: pre-wrap;
+  }
+  .count {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1><img src="icon.png" alt="" class="title-icon" />Bulk Subscription — CSV Generator</h1>
+  <p class="subtitle" id="subtitle"></p>
+
+  <div class="tabs" role="tablist">
+    <button type="button" class="tab" role="tab" data-tab="cancel">Bulk Cancel Subscription</button>
+    <button type="button" class="tab" role="tab" data-tab="eligibility">Bulk Eligibility</button>
+  </div>
+
+  <div class="panel">
+    <label for="input">DBeaver data (tab, comma, or space separated — one row per line)</label>
+    <textarea id="input"></textarea>
+    <div class="hint">Expected column order per row: <strong>businessId, bundleId, subscriptionId</strong>. Copy-paste straight from DBeaver's grid (tab-separated) or a CSV export (comma-separated) — both are auto-detected. Blank lines are ignored.</div>
+
+    <div class="row">
+      <div class="field">
+        <label for="date">Date for filename</label>
+        <input type="date" id="date" />
+      </div>
+      <div class="field">
+        <label for="seq">Sequence (XX, per day)</label>
+        <input type="number" id="seq" min="1" max="99" value="1" />
+      </div>
+    </div>
+
+    <div class="filename-preview" id="filenamePreview"></div>
+    <div id="error" class="error"></div>
+    <div id="count" class="count"></div>
+
+    <button id="downloadBtn" disabled>Download CSV</button>
+  </div>
+
+  <div class="panel" id="previewPanel" style="display:none;">
+    <label>Preview</label>
+    <table id="previewTable"></table>
+  </div>
+</div>
+
+<script>
+  const inputEl = document.getElementById('input');
+  const dateEl = document.getElementById('date');
+  const seqEl = document.getElementById('seq');
+  const subtitleEl = document.getElementById('subtitle');
+  const filenamePreviewEl = document.getElementById('filenamePreview');
+  const errorEl = document.getElementById('error');
+  const countEl = document.getElementById('count');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const previewPanel = document.getElementById('previewPanel');
+  const previewTable = document.getElementById('previewTable');
+  const tabButtons = document.querySelectorAll('.tab');
+
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  const PLACEHOLDER = [
+    '93344\t5fc03ba6-b9c1-47a2-9a98-3efb8ffb8efd\t050b325f-a037-48d3-bec4-2e2a8feb5ca9',
+    '93355\t5fc03ba6-b9c1-47a2-9a98-3efb8ffb8efd\ta8abb583-0549-4391-aa87-170477b3cbbe',
+    '92094\teb37d0cd-9af1-48b2-a1e8-b36db566e11f\t88637e75-cbe2-45b4-9406-c5f8543372ba'
+  ].join('\n');
+
+  const TABS = {
+    cancel: {
+      screen: 'Bulk Cancel Subscription',
+      filePrefix: 'create_cancellation_bulk_request',
+      seqKeyPrefix: 'bulkCancelSeq'
+    },
+    eligibility: {
+      screen: 'Bulk Eligibility',
+      filePrefix: 'create_eligibility_bulk_request',
+      seqKeyPrefix: 'bulkEligibilitySeq'
+    }
+  };
+
+  let activeTab = 'cancel';
+  const drafts = { cancel: '', eligibility: '' };
+
+  function todayLocal() {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function storageKeyForDate(tab, yyyymmdd) {
+    return `${TABS[tab].seqKeyPrefix}_${yyyymmdd}`;
+  }
+
+  function initSequenceForToday() {
+    const iso = todayLocal();
+    dateEl.value = iso;
+    const yyyymmdd = iso.replaceAll('-', '');
+    const stored = localStorage.getItem(storageKeyForDate(activeTab, yyyymmdd));
+    seqEl.value = stored ? (parseInt(stored, 10) + 1) : 1;
+  }
+
+  function renderTab() {
+    tabButtons.forEach(btn => {
+      const isActive = btn.dataset.tab === activeTab;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-selected', String(isActive));
+    });
+    subtitleEl.textContent = `Paste rows copied from DBeaver (BusinessId, BundleId, SubscriptionId) and download a CSV ready to upload into tide-web-apps' ${TABS[activeTab].screen} screen.`;
+    inputEl.placeholder = PLACEHOLDER;
+  }
+
+  function switchTab(tab) {
+    if (tab === activeTab) return;
+    drafts[activeTab] = inputEl.value;
+    activeTab = tab;
+    inputEl.value = drafts[activeTab];
+    renderTab();
+    initSequenceForToday();
+    update();
+  }
+
+  function parseRows(raw) {
+    const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const rows = [];
+    const errors = [];
+
+    lines.forEach((line, idx) => {
+      const parts = line.split(/\t|,/).map(p => p.trim()).filter(p => p.length > 0);
+      const cols = parts.length >= 3 ? parts : line.split(/\s+/).map(p => p.trim());
+
+      if (cols.length !== 3) {
+        errors.push(`Line ${idx + 1}: expected 3 columns (businessId, bundleId, subscriptionId), got ${cols.length} — "${line}"`);
+        return;
+      }
+
+      const [businessId, bundleId, subscriptionId] = cols;
+
+      if (!UUID_RE.test(bundleId)) {
+        errors.push(`Line ${idx + 1}: bundleId "${bundleId}" does not look like a UUID`);
+      }
+      if (!UUID_RE.test(subscriptionId)) {
+        errors.push(`Line ${idx + 1}: subscriptionId "${subscriptionId}" does not look like a UUID`);
+      }
+
+      rows.push({ businessId, bundleId, subscriptionId });
+    });
+
+    return { rows, errors };
+  }
+
+  function csvEscape(value) {
+    if (/[",\n]/.test(value)) {
+      return `"${value.replace(/"/g, '""')}"`;
+    }
+    return value;
+  }
+
+  function buildCsv(rows) {
+    const header = 'BusinessId,BundleId,SubscriptionId';
+    const lines = rows.map(r => [r.businessId, r.bundleId, r.subscriptionId].map(csvEscape).join(','));
+    return [header, ...lines].join('\r\n') + '\r\n';
+  }
+
+  function buildFilename() {
+    const iso = dateEl.value || todayLocal();
+    const yyyymmdd = iso.replaceAll('-', '');
+    const seq = String(parseInt(seqEl.value || '1', 10)).padStart(2, '0');
+    return `${TABS[activeTab].filePrefix}_${yyyymmdd}_${seq}.csv`;
+  }
+
+  function renderPreview(rows) {
+    if (rows.length === 0) {
+      previewPanel.style.display = 'none';
+      return;
+    }
+    previewPanel.style.display = 'block';
+    const headerRow = '<tr><th>BusinessId</th><th>BundleId</th><th>SubscriptionId</th></tr>';
+    const bodyRows = rows.map(r => `<tr><td>${r.businessId}</td><td>${r.bundleId}</td><td>${r.subscriptionId}</td></tr>`).join('');
+    previewTable.innerHTML = headerRow + bodyRows;
+  }
+
+  function update() {
+    const { rows, errors } = parseRows(inputEl.value);
+
+    filenamePreviewEl.textContent = rows.length > 0 ? buildFilename() : '';
+    errorEl.textContent = errors.length > 0 ? errors.join('\n') : '';
+    countEl.textContent = rows.length > 0 ? `${rows.length} row(s) ready` : '';
+    downloadBtn.disabled = rows.length === 0 || errors.length > 0;
+
+    renderPreview(rows);
+  }
+
+  downloadBtn.addEventListener('click', () => {
+    const { rows, errors } = parseRows(inputEl.value);
+    if (rows.length === 0 || errors.length > 0) return;
+
+    const csv = buildCsv(rows);
+    const filename = buildFilename();
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    const iso = dateEl.value || todayLocal();
+    const yyyymmdd = iso.replaceAll('-', '');
+    localStorage.setItem(storageKeyForDate(activeTab, yyyymmdd), String(parseInt(seqEl.value || '1', 10)));
+    seqEl.value = parseInt(seqEl.value || '1', 10) + 1;
+    filenamePreviewEl.textContent = buildFilename();
+  });
+
+  tabButtons.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+  inputEl.addEventListener('input', update);
+  dateEl.addEventListener('change', update);
+  seqEl.addEventListener('input', update);
+
+  renderTab();
+  initSequenceForToday();
+  update();
+</script>
+</body>
+</html>
